@@ -602,7 +602,7 @@ def check_input_parameters( master_d ):
         # JONO edit: if the .grd files don't exist, try .nc file extension
         for i in [ 'age1_file', 'age2_file' ]:
             file = control_d[i]
-            
+
             if not os.path.exists( file ): # Check if the existing file with .grd extension exists
                 name, extension = os.path.splitext(file)
                 extension = '.0Ma.nc' # rename to the netcdf4 extension
@@ -610,6 +610,15 @@ def check_input_parameters( master_d ):
                 file = control_d[i]
                 cmd = '%(file)s -Rg -S' % vars()
                 callgmt( 'grdedit', cmd ) # Make sure the longitude of the .nc file is consistent with everything else
+
+            # Check the region of the grids
+            cmd = '%(file)s -Cn -o1' % vars()
+            region = callgmt('grdinfo', cmd)
+            if region != 360:
+                print('Grid not in 0-360 format, reformatting now')
+                cmd = '%(file)s -Rg -S' % vars()
+                callgmt( 'grdedit', cmd ) 
+                
         # ensure that these files exist
         for ifile in [ control_d['age1_file'], control_d['age2_file'], control_d['sub_file'] ]:
             if not os.path.exists( ifile ):
