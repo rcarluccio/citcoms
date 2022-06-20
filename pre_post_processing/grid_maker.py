@@ -13,7 +13,7 @@
 # grid_maker.py
 #=====================================================================
 # This script is a general purpose tool to process Citcoms output data
-# into one ore more GMT style .grd format data files.  
+# into one ore more GMT style .grd or .nc format data files.  
 # Please see the usage() function below, and the sample configuration 
 # file: /sample_data/grid_maker.cfg for more info.
 #=====================================================================
@@ -459,7 +459,7 @@ def main():
                         cmd += ' -T' + str(control_d[s]['T'])
 
                     #opt_a = 
-                    Core_GMT.callgmt( 'surface', cmd, '', '', ' -G' + grid_filename )
+                    Core_GMT.callgmt( 'sphinterpolate', cmd, '', '', ' -G' + grid_filename )
 
                     # label the variables
 			
