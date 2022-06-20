@@ -547,6 +547,10 @@ def main():
             # end of loop over sections
 
     # end of loop over times
+    
+    # remove some of the unneeded files
+    os.system("rm -f *.cpt")
+    os.system("rm -f *.ps")
 
 #=====================================================================
 #=====================================================================
