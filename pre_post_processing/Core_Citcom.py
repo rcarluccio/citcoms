@@ -219,6 +219,7 @@ dynamic_topography_restart_params = {
     'CitcomS.solver.output.use_cbf_topo' : 1,
     'CitcomS.solver.output.self_gravitation' : 1,
     'CitcomS.solver.ic.solution_cycles_init' : 'RS_TIMESTEP',
+    'CitcomS.solver.ic.restart' : 0,
     
     # Added items - RC
     'CitcomS.solver.bc.topvbc'   : 0.0,
@@ -1273,9 +1274,9 @@ A time_spec string may be given as:
       spec_d['age_Ma'] = age_l
       spec_d['runtime_Myr'] = runtime_l
       spec_d['timestep'] = timestep_l
-        
+      
     # end of check for time_d
-
+    
     return spec_d
 
 #=====================================================================
