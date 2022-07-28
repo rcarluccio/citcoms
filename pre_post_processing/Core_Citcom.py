@@ -241,7 +241,8 @@ dynamic_topography_restart_params = {
     'CitcomS.solver.tracer.regular_grid_delphi' : 'DELETE',
     
     # Added items to be comment out in the PID copy - RC
-    'CitcomS.solver.datadir':'COMMENT',
+    'CitcomS.solver.datadir':'COMMENT', # RS restart have different names for datadir*
+    'CitcomS.solver.datadir_old':'COMMENT',
     'CitcomS.solver.mesher.coor_file':'COMMENT',
     'CitcomS.solver.param.lith_age_file':'COMMENT',
     'CitcomS.solver.param.slab_assim_file':'COMMENT',
