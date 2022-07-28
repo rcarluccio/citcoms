@@ -229,6 +229,10 @@ dynamic_topography_restart_params = {
     'CitcomS.solver.bc.bottbc': 1,
     'CitcomS.solver.bc.bottbcval': 1.0,
     
+    # if tracers are turned off the following might have too
+    'CitcomS.solver.visc.low_visc_channel' :0,
+    'CitcomS.solver.visc.low_visc_wedge'   :0,
+    
     'CitcomS.solver.tracer.tracer' : 'off',
     'CitcomS.solver.tracer.chemical_buoyancy' : 'off',
     'CitcomS.solver.tracer.tracer_file' : 'DELETE',
