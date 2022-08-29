@@ -232,7 +232,9 @@ def main():
    
         # cache for the file_format
         file_format_cache = ''
+        
 
+        
         # Loop over sections (fields) 
         for ss, s in enumerate (control_d['_SECTIONS_'] ) :
 
@@ -280,10 +282,13 @@ def main():
                 # get the data file column name specifics for this field 
                 field_column = Core_Citcom.field_to_file_map[field_name]['column']
                 print( now(), 'grid_maker.py: field_column = ', field_column )
-
+                
+            
                 # create the total citcoms data filenames to read 
                 file_format = ''
-                        
+                
+                pos_for_abspath = datadir.find ("/Data")
+                
                 # check for various data dirs
                 if os.path.exists( datadir + '/0/') :
                     
@@ -302,12 +307,8 @@ def main():
                     print( now(), 'grid_maker.py: path found = ', 'Data' )
                     file_format = './Data/#/' + datafile + '.' + file_name_component + '.#.' + str(timestep)
                     
-                # Added path to dynamic topography restart data - to be tested and cleaned up in RS pre-processing
-                # elif os.path.exists('Age'+str(start_age)+'Ma') :
-                #print( now(), 'grid_maker.py: path found = ', 'Age'+str(start_age)+'Ma' )
-                #file_format = './Age'+str(start_age)+'Ma/#/' + datafile + '.' + file_name_component + '.#.'+ str(timestep)
                 
-                    # Added path to dynamic topography post-processing - RC
+                # Added path to dynamic topography post-processing - RC
                 elif os.path.exists('Age'+str(age_Ma)+'Ma') :
                     print( now(), 'grid_maker.py: path found = ', datadir )
                     file_format = './Age'+str(age_Ma)+'Ma/#/' + datafile + '.' + file_name_component + '.#.'+ str(timestep)
@@ -317,7 +318,12 @@ def main():
                     print( now(), 'grid_maker.py: path found = ', datadir )
                     file_format = './Age'+str(output_dir_age)+'Ma/#/' + datafile + '.' + file_name_component + '.#.'+ str(timestep)
                 
-                  
+                # Added path to post-process with remote location - RC
+                elif os.path.exists(datadir[:pos_for_abspath]) :
+                        
+                     file_format = datadir[:pos_for_abspath]+'/data/#/' + datafile + '.' + file_name_component + '.#.' + str(timestep)
+                
+                
                 # report error 
                 else :
                     print( now() )
@@ -325,7 +331,9 @@ def main():
                     print('       Skipping this section.')
                     print( now(), 'grid_maker.py: file_format = ', file_format)
                     continue # to next section
-
+                
+                
+                
                 print( now(), 'grid_maker.py: file_format = ', file_format )
 
                 # check if this file data has already been read in 

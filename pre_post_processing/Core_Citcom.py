@@ -1529,7 +1529,7 @@ locate the closest available time step data files avaialable for the requested t
     # file name pattern to check ; NOTE: only checking proc 0 
     # check based on datafile and data dir like the timefile 
     file_patt = ''
-
+    pos_for_abspath = datadir.find ("%RANK")
     if os.path.exists( datadir + '/0/') :
         file_patt = datadir + '/0/' + datafile + '.' + file_name_component + '.0.*'
 
@@ -1545,6 +1545,10 @@ locate the closest available time step data files avaialable for the requested t
     # Added path to dynamic topography restart data - RC
     elif os.path.exists('Age'+str(request_age)+'Ma') :
         file_patt = './Age'+str(request_age)+'Ma/0/' + datafile + '.' + file_name_component + '.0.*'
+        
+    # Added path for remote post-processing - RC
+    elif os.path.exists(datadir[:pos_for_abspath]):
+         file_patt = datadir[:pos_for_abspath]+'0/' + datafile + '.' + file_name_component + '.0.*'
        
 
     # get a list of all the files that match the pattern
@@ -1553,7 +1557,7 @@ locate the closest available time step data files avaialable for the requested t
     step_list = [ int( f.split('.')[-1] ) for f in file_list ] 
     step_list = sorted( step_list )
 
-    if verbose: 
+    if verbose:
         print( now(), 'find_available_timestep_from_timestep: file_patt =', file_patt)
         #print( now(), 'find_available_timestep_from_timestep: file_list =', file_list)
         print( now(), 'find_available_timestep_from_timestep: step_list =', step_list)
