@@ -253,11 +253,30 @@ def main():
 
                 # check for compound field
                 field_name_req = ''
-                if field_name == 'horiz_vmag':
+                if field_name == 'Vx':
                     # save the requested name
                     field_name_req = field_name
                     # reset to get one component 
                     field_name = 'vx'
+                    
+                if field_name == 'Vy':
+                    # save the requested name
+                    field_name_req = field_name
+                    # reset to get one component
+                    field_name = 'vy'
+                    
+                if field_name == 'Vz':
+                    # save the requested name
+                    field_name_req = field_name
+                    # reset to get one component
+                    field_name = 'vz'
+                    
+                #if field_name == 'Vmag':
+                    # save the requested name
+                    # field_name_req = field_name
+                    # reset to get one component
+                    # field_name = 'vmag'
+
 
                 print('')
                 print( now(), 'grid_maker.py: Processing: field =', field_name) 
@@ -332,8 +351,6 @@ def main():
                     print( now(), 'grid_maker.py: file_format = ', file_format)
                     continue # to next section
                 
-                
-                
                 print( now(), 'grid_maker.py: file_format = ', file_format )
 
                 # check if this file data has already been read in 
@@ -352,8 +369,30 @@ def main():
                 field_data = np.array( [ line[field_column] for line in file_data ] )
                 print( now(), 'grid_maker.py:  len(field_data) = ', len(field_data) )
 
+
                 # Check for compound field
-                if field_name_req == 'horiz_vmag':
+                # To do: create a function that extract velocity vectors, and reads the field_column from field_name_req - use that function to compute v_mag
+                if field_name_req == 'Vx':
+                    
+                    # Get the first component data ('vx')
+                    field_column = 0
+                    # read data by proc, e.g., velo, visc, comp_nd, surf, botm
+                    file_data2 = Core_Citcom.read_proc_files_to_cap_list( master_d['pid_d'], file_format, field_name)
+                    # flatten data since we don't care about specific cap numbers for the loop over levels/depths
+                    file_data2 = Core_Util.flatten_nested_structure( file_data2 )
+                    print( now(), 'grid_maker.py: len(file_data2) = ', len(file_data2) )
+                    field_data2 = np.array( [ line[field_column] for line in file_data2 ] )
+                    print( now(), 'grid_maker.py:  len(field_data2) = ', len(field_data) )
+
+                    # combine the data and rest the main variable
+                    field_data3 = np.hypot( field_data, field_data2)
+                    field_data = field_data3
+
+                    # put back field name to requested name
+                    field_name = field_name_req
+                    
+                # Check for compound field
+                if field_name_req == 'Vy':
                     
                     # Get the second component data ('vy')
                     field_column = 1
@@ -370,9 +409,27 @@ def main():
                     field_data = field_data3
 
                     # put back field name to requested name
-                    field_name = field_name_req 
-                # end if check on compound field
+                    field_name = field_name_req
+                
+                    
+                if field_name_req == 'Vz':
+                    
+                    # Get the third component data ('vy')
+                    field_column = 2
+                    # read data by proc, e.g., velo, visc, comp_nd, surf, botm
+                    file_data2 = Core_Citcom.read_proc_files_to_cap_list( master_d['pid_d'], file_format, field_name)
+                    # flatten data since we don't care about specific cap numbers for the loop over levels/depths
+                    file_data2 = Core_Util.flatten_nested_structure( file_data2 )
+                    print( now(), 'grid_maker.py: len(file_data2) = ', len(file_data2) )
+                    field_data2 = np.array( [ line[field_column] for line in file_data2 ] )
+                    print( now(), 'grid_maker.py:  len(field_data2) = ', len(field_data) )
 
+                    # combine the data and rest the main variable
+                    field_data3 = np.hypot( field_data, field_data2)
+                    field_data = field_data3
+
+                    # put back field name to requested name
+                    field_name = field_name_req
 
                 print( now(), 'grid_maker.py:  len(field_data) = ', len(field_data) )
                 print( now() )
@@ -399,6 +456,9 @@ def main():
                         # perform a z slice for citcom data 
                         field_slice = field_data[level::nodez] # FIXME : how to get a v slice 
                         xyz_filename = datafile + '-' + field_name + '-' + str(age_Ma) + 'Ma-' + str(depth) + 'km.xyz'
+                        
+                    # To do: add v_mag here
+                    
                     else:
                         # perform a z slice for citcom data 
                         field_slice = field_data[level::nodez]
@@ -408,6 +468,7 @@ def main():
                     print( now(), 'grid_maker.py: xyz_filename =', xyz_filename)
             
                     if field_name == 'visc': field_slice = np.log10( field_slice )
+                    
 
                     print( now(), 'grid_maker.py: type(field_slice) = ', type(field_slice) )
                     print( now(), 'grid_maker.py:  len(field_slice) = ', len(field_slice) )
