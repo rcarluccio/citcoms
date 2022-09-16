@@ -258,6 +258,25 @@ def main():
                     field_name_req = field_name
                     # reset to get one component 
                     field_name = 'vx'
+                    
+                if field_name == 'Vx':
+                    # save the requested name
+                    field_name_req = field_name
+                    # reset to get one component
+                    field_name = 'vx'
+                    
+                if field_name == 'Vy':
+                    # save the requested name
+                    field_name_req = field_name
+                    # reset to get one component
+                    field_name = 'vy'
+                    
+                if field_name == 'Vz':
+                    # save the requested name
+                    field_name_req = field_name
+                    # reset to get one component
+                    field_name = 'vz'
+
 
                 print('')
                 print( now(), 'grid_maker.py: Processing: field =', field_name) 
