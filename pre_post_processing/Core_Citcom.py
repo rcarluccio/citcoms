@@ -219,6 +219,7 @@ dynamic_topography_restart_params = {
     'CitcomS.solver.output.use_cbf_topo' : 1,
     'CitcomS.solver.output.self_gravitation' : 1,
     'CitcomS.solver.ic.solution_cycles_init' : 'RS_TIMESTEP',
+    'CitcomS.solver.ic.restart' : 0,
     
     # Added items - RC
     'CitcomS.solver.bc.topvbc'   : 0.0,
@@ -227,6 +228,10 @@ dynamic_topography_restart_params = {
     
     'CitcomS.solver.bc.bottbc': 1,
     'CitcomS.solver.bc.bottbcval': 1.0,
+    
+    # if tracers are turned off the following might have too
+    'CitcomS.solver.visc.low_visc_channel' :0,
+    'CitcomS.solver.visc.low_visc_wedge'   :0,
     
     'CitcomS.solver.tracer.tracer' : 'off',
     'CitcomS.solver.tracer.chemical_buoyancy' : 'off',
@@ -240,7 +245,8 @@ dynamic_topography_restart_params = {
     'CitcomS.solver.tracer.regular_grid_delphi' : 'DELETE',
     
     # Added items to be comment out in the PID copy - RC
-    'CitcomS.solver.datadir':'COMMENT',
+    'CitcomS.solver.datadir':'COMMENT', # RS restart have different names for datadir*
+    'CitcomS.solver.datadir_old':'COMMENT',
     'CitcomS.solver.mesher.coor_file':'COMMENT',
     'CitcomS.solver.param.lith_age_file':'COMMENT',
     'CitcomS.solver.param.slab_assim_file':'COMMENT',
@@ -1273,9 +1279,9 @@ A time_spec string may be given as:
       spec_d['age_Ma'] = age_l
       spec_d['runtime_Myr'] = runtime_l
       spec_d['timestep'] = timestep_l
-        
+      
     # end of check for time_d
-
+    
     return spec_d
 
 #=====================================================================
@@ -1523,7 +1529,7 @@ locate the closest available time step data files avaialable for the requested t
     # file name pattern to check ; NOTE: only checking proc 0 
     # check based on datafile and data dir like the timefile 
     file_patt = ''
-
+    pos_for_abspath = datadir.find ("%RANK")
     if os.path.exists( datadir + '/0/') :
         file_patt = datadir + '/0/' + datafile + '.' + file_name_component + '.0.*'
 
@@ -1539,6 +1545,10 @@ locate the closest available time step data files avaialable for the requested t
     # Added path to dynamic topography restart data - RC
     elif os.path.exists('Age'+str(request_age)+'Ma') :
         file_patt = './Age'+str(request_age)+'Ma/0/' + datafile + '.' + file_name_component + '.0.*'
+        
+    # Added path for remote post-processing - RC
+    elif os.path.exists(datadir[:pos_for_abspath]):
+         file_patt = datadir[:pos_for_abspath]+'0/' + datafile + '.' + file_name_component + '.0.*'
        
 
     # get a list of all the files that match the pattern
@@ -1547,7 +1557,7 @@ locate the closest available time step data files avaialable for the requested t
     step_list = [ int( f.split('.')[-1] ) for f in file_list ] 
     step_list = sorted( step_list )
 
-    if verbose: 
+    if verbose:
         print( now(), 'find_available_timestep_from_timestep: file_patt =', file_patt)
         #print( now(), 'find_available_timestep_from_timestep: file_list =', file_list)
         print( now(), 'find_available_timestep_from_timestep: step_list =', step_list)

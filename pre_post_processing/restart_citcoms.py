@@ -266,7 +266,7 @@ def create_restart_run_cfg( master_run_pid_d, control_d, rs_replace_d, rs_dir, r
     
 
     # Make changes to local restart_run_cfg_d based upon control_d and rs_replace_d
-
+    # FIX ME need to have headers in square brackets
     # Loop over all the params in rs_replace_d ; these are the values to update for restart
     for p in sorted(rs_replace_d) :
 
@@ -328,6 +328,7 @@ def create_restart_run_cfg( master_run_pid_d, control_d, rs_replace_d, rs_dir, r
 
         
            # Check in the PID copy if a parameter has already been defined rs_replace_d. if true it will be commented - RC
+           
             if not param_name in restart_run_cfg_d[section_name]:
             
                 # this is a regular value, update restart_run_cfg_d
@@ -436,8 +437,8 @@ def create_no_lith_temp(control_d, master_run_d, rs_replace_d, rs_dir, rs_inp_cf
     out_data_by_proc = Core_Citcom.get_proc_list_from_cap_list( master_run_d['pid_d'], data_by_cap )
 
     # set up output info 
-    rs_datafile = datafile + '_restart_' + str(int(np.around(age))) + 'Ma'
-
+    #rs_datafile = datafile + '_restart_' + str(int(np.around(age))) + 'Ma'
+    rs_datafile = datafile + str(int(np.around(age))) + 'Ma' # RC
     ic_dir = rs_dir + '/ic_dir'
     Core_Util.make_dir( ic_dir )
     
