@@ -26,6 +26,8 @@ import Core_GMT
 import Core_Util
 from Core_Util import now
 
+import make_netcdfgrid
+
 #from scipy.io import netcdf
 #import netCDF4
 #from netCDF4 import Dataset
@@ -575,7 +577,7 @@ def main():
                         print( now(), 'grid_maker.py: T =', T)
                         Core_GMT.plot_grid( plateframe_grid_name, xy_filename, grid_R, T, J)
                     # end of plotting 
-                
+
                 # end of loop over levels 
 
             # end of loop over sections
