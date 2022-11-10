@@ -34,9 +34,9 @@ import make_netcdfgrid
 
 
 # FIXME: turn these False when stable
-#Core_Util.verbose = True 
-#Core_Citcom.verbose = True 
-Core_GMT.verbose = True
+Core_Util.verbose = True 
+Core_Citcom.verbose = False 
+Core_GMT.verbose = False
 
 #=====================================================================
 #=====================================================================
@@ -77,6 +77,7 @@ def main():
 
     # get the .cfg file as a dictionary
     control_d = Core_Util.parse_configuration_file( sys.argv[1], False, False )
+    sys.exit()
     Core_Util.tree_print( control_d )
 
     # set the pid file 
@@ -498,18 +499,6 @@ def main():
                 else:
                     print('Spherical interpolator worked succesfully')
 
-                # JONO - create field and age directories if needed. Done here
-                # os.makedirs(field_name, exist_ok=True)
-                os.makedirs(f'{field_name}/{age_Ma}', exist_ok=True)
-
-                if os.path.isfile(f'{field_name}/{age_Ma}/{grid_filename}'):
-                    os.remove(f'{field_name}/{age_Ma}/{grid_filename}')
-                shutil.move(grid_filename, f'{field_name}/{age_Ma}')
-
-                # remove some of the unneeded files
-                os.remove(xyz_filename)
-                os.remove(median_xyz_filename)
-
                 ### Jono- uncomment below to produce plots
 
                 # # label the variables
@@ -518,37 +507,45 @@ def main():
                 # cmd = grid_filename + ' -D/=/=/' + str(field_name) + '/=/=/' + str(field_name) + '/' + str(field_name)
                 # Core_GMT.callgmt( 'grdedit', cmd, '', '', '')
         
-                # # Dimensionalize grid   
+                # Dimensionalize grid   
 
-                # if control_d[s].get('dimensional'):
-                #     print( now(), 'grid_maker.py: dimensional = ', control_d[s]['dimensional'])
-                #     dim_grid_name = grid_filename.replace('.nc', '.dimensional.nc')
-                #     Core_Citcom.dimensionalize_grid(pid_file, field_name, grid_filename, dim_grid_name)
+                if control_d[s].get('dimensional'):
+                    print( now(), 'grid_maker.py: dimensional = ', control_d[s]['dimensional'])
+                    dim_grid_name = grid_filename.replace('.nc', '.dimensional.nc')
+                    Core_Citcom.dimensionalize_grid(pid_file, field_name, grid_filename, dim_grid_name)
+
+                    dim_dir_name = f'{field_name}_dimensional'
+                    # JONO: Add dimensionalised grid to its own folder
+                    os.makedirs(f'{dim_dir_name}/{age_Ma}', exist_ok=True)
+
+                    if os.path.isfile(f'{dim_dir_name}/{age_Ma}/{dim_grid_name}'):
+                        os.remove(f'{dim_dir_name}/{age_Ma}/{dim_grid_name}')
+                    shutil.move(dim_grid_name, f'{dim_dir_name}/{age_Ma}')
 
                 #     # FIXME: for dynamic topo remove  mean 
                 #     # grdinfo to get mean ; see To_Refactor for example 
 
-                # # save this grid and its age in a list
-                # if control_d[s].get('dimensional'):
-                #     grid_list.append( (dim_grid_name, age_Ma) )
-                # else: 
-                #     grid_list.append( (grid_filename, age_Ma) )
+                # save this grid and its age in a list
+                if control_d[s].get('dimensional'):
+                    grid_list.append( (dim_grid_name, age_Ma) )
+                else: 
+                    grid_list.append( (grid_filename, age_Ma) )
 
 
-                # # Optional step to transform grid to plate frame
-                # if 'make_plate_frame_grid' in control_d :
-                #     cmd = 'frame_change_pygplates.py %(age_Ma)s %(grid_filename)s %(grid_R)s' % vars()
-                #     print(now(), 'grid_maker.py: cmd =', cmd)
-                #     os.system(cmd)
+                # Optional step to transform grid to plate frame
+                if 'make_plate_frame_grid' in control_d :
+                    cmd = 'frame_change_pygplates.py %(age_Ma)s %(grid_filename)s %(grid_R)s' % vars()
+                    print(now(), 'grid_maker.py: cmd =', cmd)
+                    os.system(cmd)
 
 
-                # # Assoicate this grid with GPlates exported line data in .xy format:
-                # # compute age value 
-                # age_float = 0.0
+                # Assoicate this grid with GPlates exported line data in .xy format:
+                # compute age value 
+                age_float = 0.0
 
-                # # time_list values for citcom data uses timesteps; get age 
-                # time_triple = Core_Citcom.get_time_triple_from_timestep(master_d['time_d']['triples'], timestep)
-                # age_float = time_triple[1]
+                # time_list values for citcom data uses timesteps; get age 
+                time_triple = Core_Citcom.get_time_triple_from_timestep(master_d['time_d']['triples'], timestep)
+                age_float = time_triple[1]
 
                 # # truncate to nearest int and make a string for the gplates .xy file name 
                 # if age_float < 0: age_float = 0.0
@@ -579,19 +576,31 @@ def main():
                 #     T = Core_GMT.get_T_from_grdinfo( dim_grid_name )
                 #     Core_GMT.plot_grid( dim_grid_name, xy_filename, grid_R, T, J)
 
-                # # plot plate frame grid 
-                # if 'make_plate_frame_grid' in control_d :
-                #     plateframe_grid_name = grid_filename.replace('.nc', '-plateframe.nc')
-                #     xy_filename = ''
-                #     xy_path = master_d['geoframe_d']['gplates_line_dir']
-                #     # present day plate outlines : use '0' 
-                #     xy_filename = xy_path + '/' + 'topology_platepolygons_0.00Ma.xy' 
-                #     print( now(), 'grid_maker.py: xy_filename = ', xy_filename)
+                # plot plate frame grid 
+                if 'make_plate_frame_grid' in control_d :
+                    plateframe_grid_name = grid_filename.replace('.nc', '-plateframe.nc')
+                    xy_filename = ''
+                    xy_path = master_d['geoframe_d']['gplates_line_dir']
+                    # present day plate outlines : use '0' 
+                    xy_filename = xy_path + '/' + 'topology_platepolygons_0.00Ma.xy' 
+                    print( now(), 'grid_maker.py: xy_filename = ', xy_filename)
 
-                #     T = Core_GMT.get_T_from_grdinfo( plateframe_grid_name )
-                #     print( now(), 'grid_maker.py: T =', T)
-                #     Core_GMT.plot_grid( plateframe_grid_name, xy_filename, grid_R, T, J)
+                    T = Core_GMT.get_T_from_grdinfo( plateframe_grid_name )
+                    print( now(), 'grid_maker.py: T =', T)
+                    Core_GMT.plot_grid( plateframe_grid_name, xy_filename, grid_R, T, J)
                 # end of plotting 
+
+                # JONO - create field and age directories if needed. Done here
+                # os.makedirs(field_name, exist_ok=True)
+                os.makedirs(f'{field_name}/{age_Ma}', exist_ok=True)
+
+                if os.path.isfile(f'{field_name}/{age_Ma}/{grid_filename}'):
+                    os.remove(f'{field_name}/{age_Ma}/{grid_filename}')
+                shutil.move(grid_filename, f'{field_name}/{age_Ma}')
+
+                # remove some of the unneeded files
+                os.remove(xyz_filename)
+                os.remove(median_xyz_filename)
 
             # end of loop over levels 
 
