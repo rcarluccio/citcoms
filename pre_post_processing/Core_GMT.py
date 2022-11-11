@@ -434,7 +434,7 @@ def get_T_from_minmax(xyz_filename) :
 def get_T_from_grdinfo(grid_filename):
     '''get a -T value from grdinfo on a grid file'''
 
-    cmd = 'grdinfo -C %(grid_filename)s' % vars()
+    cmd = 'gmt grdinfo -C %(grid_filename)s' % vars()
     s = subprocess.check_output( cmd, shell=True, universal_newlines=True)
     if verbose: print( Core_Util.now(), cmd )
     l = s.split()

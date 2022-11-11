@@ -26,7 +26,7 @@ import geodynamic_framework_configuration_types
 # Global variables
 
 # turn verbose off by default; client code can call Core_Util.verbose = True
-verbose = False 
+verbose = True 
 
 # the character uses in GMT style .xy files to indicate a header line
 GMT_HEADER_CHAR = '>'
