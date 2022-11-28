@@ -18,25 +18,13 @@
 # file: /sample_data/grid_maker.cfg for more info.
 #=====================================================================
 #=====================================================================
-import sys, string, os
+import sys, string, os, shutil
 import numpy as np
 #=====================================================================
 import Core_Citcom
 import Core_GMT
 import Core_Util
 from Core_Util import now
-
-import make_netcdfgrid
-
-#from scipy.io import netcdf
-#import netCDF4
-#from netCDF4 import Dataset
-
-
-# FIXME: turn these False when stable
-#Core_Util.verbose = True 
-#Core_Citcom.verbose = True 
-Core_GMT.verbose = True
 
 #=====================================================================
 #=====================================================================
@@ -77,6 +65,29 @@ def main():
 
     # get the .cfg file as a dictionary
     control_d = Core_Util.parse_configuration_file( sys.argv[1], False, False )
+
+    # Set the verbose settings
+    if 'verbose' in control_d:
+        print(f"{now()} Verbose is set to {control_d['verbose']} in the config file")
+        verbose=control_d['verbose']
+    else:
+        print(f"{now()} Verbose is not set in config file, using defaults (probably verbose=False)")
+        verbose=False
+
+    # Adjust verbose settings for all other functions- can be manually adjusted if you want to mix and match 
+    Core_Util.verbose = verbose 
+    Core_Citcom.verbose = verbose 
+    Core_GMT.verbose = verbose
+
+    # Set the debug settings
+    if 'debug' in control_d:
+        print(f"{now()} Debug is set to {control_d['debug']} in the config file")
+        debug=control_d['debug']
+    else:
+        print(f"{now()} Debug is not set in config file, using defaults (probably debug=False)")
+        debug=False
+
+    print(f"{now()} Config file dictionary:")
     Core_Util.tree_print( control_d )
 
     # set the pid file 
@@ -239,309 +250,318 @@ def main():
         
         # Loop over sections (fields) 
         for ss, s in enumerate (control_d['_SECTIONS_'] ) :
+            print( now(), 'grid_maker.py: Processing section = ', s) 
 
-                # FIXME: this extra indent is probably from when sections loop was inside level loop ? 
+            # check for required parameter 'field'
+            if not 'field' in control_d[s] :
+               print('ERROR: Required parameter "field" missing from section.')
+               print('       Skipping this section.')
+               continue # to next section
 
-                print( now(), 'grid_maker.py: Processing section = ', s) 
+            # get the field name 
+            field_name = control_d[s]['field']
 
-                # check for required parameter 'field'
-                if not 'field' in control_d[s] :
-                   print('ERROR: Required parameter "field" missing from section.')
-                   print('       Skipping this section.')
-                   continue # to next section
- 
-                # get the field name 
-                field_name = control_d[s]['field']
-
-                # check for compound field
-                field_name_req = ''
-                if field_name == 'horiz_vmag':
-                    # save the requested name
-                    field_name_req = field_name
-                    # reset to get one component 
-                    field_name = 'vx'
-                    
-                if field_name == 'Vx':
-                    # save the requested name
-                    field_name_req = field_name
-                    # reset to get one component
-                    field_name = 'vx'
-                    
-                if field_name == 'Vy':
-                    # save the requested name
-                    field_name_req = field_name
-                    # reset to get one component
-                    field_name = 'vy'
-                    
-                if field_name == 'Vz':
-                    # save the requested name
-                    field_name_req = field_name
-                    # reset to get one component
-                    field_name = 'vz'
-
-
-                print('')
-                print( now(), 'grid_maker.py: Processing: field =', field_name) 
-
-                # set the region
-                if nproc_surf == 12:
-                    grid_R = 'g'
-                    # optionally adjust the lon bounds of the grid to -180/180
-                    if 'shift_lon' in control_d :
-                        print( now(), 'grid_maker.py: grid_R set to to "d" : -180/+180/-90/90')
-                        grid_R = 'd'
-                    else :
-                        print( now(), 'grid_maker.py: grid_R set to to "g" : 0/360/-90/90')
-                else:
-                    grid_R  = str(pid_d['lon_min']) + '/' + str(pid_d['lon_max']) + '/'
-                    grid_R += str(pid_d['lat_min']) + '/' + str(pid_d['lat_max'])
-  
-                # get the data file name specifics for this field 
-                file_name_component = Core_Citcom.field_to_file_map[field_name]['file']
-                print( now(), 'grid_maker.py: file_name_component = ', file_name_component )
-
-                # get the data file column name specifics for this field 
-                field_column = Core_Citcom.field_to_file_map[field_name]['column']
-                print( now(), 'grid_maker.py: field_column = ', field_column )
+            # check for compound field
+            field_name_req = ''
+            if field_name == 'horiz_vmag':
+                # save the requested name
+                field_name_req = field_name
+                # reset to get one component 
+                field_name = 'vx'
                 
-            
-                # create the total citcoms data filenames to read 
-                file_format = ''
+            if field_name == 'Vx':
+                # save the requested name
+                field_name_req = field_name
+                # reset to get one component
+                field_name = 'vx'
                 
-                pos_for_abspath = datadir.find ("/Data")
+            if field_name == 'Vy':
+                # save the requested name
+                field_name_req = field_name
+                # reset to get one component
+                field_name = 'vy'
                 
-                # check for various data dirs
-                if os.path.exists( datadir + '/0/') :
-                    
-                    print( now(), 'grid_maker.py: path found = ', datadir + '/0/' )
-                    file_format = datadir + '/#/' + datafile + '.' + file_name_component + '.#.' + str(timestep)
+            if field_name == 'Vz':
+                # save the requested name
+                field_name_req = field_name
+                # reset to get one component
+                field_name = 'vz'
 
-                elif os.path.exists( datadir + '/' ) :
-                    print( now(), 'grid_maker.py: path found = ', datadir + '/' )
-                    file_format = datadir + '/' + datafile + '.' + file_name_component + '.#.' + str(timestep)
 
-                elif os.path.exists('data') :
-                    print( now(), 'grid_maker.py: path found = ', 'data' )
-                    file_format = './data/#/' + datafile + '.' + file_name_component + '.#.' + str(timestep)
+            print('')
+            print( now(), 'grid_maker.py: Processing: field =', field_name) 
 
-                elif os.path.exists('Data') :
-                    print( now(), 'grid_maker.py: path found = ', 'Data' )
-                    file_format = './Data/#/' + datafile + '.' + file_name_component + '.#.' + str(timestep)
-                    
-                
-                # Added path to dynamic topography post-processing - RC
-                elif os.path.exists('Age'+str(age_Ma)+'Ma') :
-                    print( now(), 'grid_maker.py: path found = ', datadir )
-                    file_format = './Age'+str(age_Ma)+'Ma/#/' + datafile + '.' + file_name_component + '.#.'+ str(timestep)
-                
-                # Added path to dynamic topography post-processing - RC
-                elif os.path.exists('Age'+str(output_dir_age)+'Ma') :
-                    print( now(), 'grid_maker.py: path found = ', datadir )
-                    file_format = './Age'+str(output_dir_age)+'Ma/#/' + datafile + '.' + file_name_component + '.#.'+ str(timestep)
-                
-                # Added path to post-process with remote location - RC
-                elif os.path.exists(datadir[:pos_for_abspath]) :
-                        
-                     file_format = datadir[:pos_for_abspath]+'/data/#/' + datafile + '.' + file_name_component + '.#.' + str(timestep)
-                
-                
-                # report error 
+            # set the region
+            if nproc_surf == 12:
+                grid_R = 'g'
+                # optionally adjust the lon bounds of the grid to -180/180
+                if 'shift_lon' in control_d :
+                    print( now(), 'grid_maker.py: grid_R set to to "d" : -180/+180/-90/90')
+                    grid_R = 'd'
                 else :
-                    print( now() )
-                    print('ERROR: Cannot find output data.')
-                    print('       Skipping this section.')
-                    print( now(), 'grid_maker.py: file_format = ', file_format)
-                    continue # to next section
-                
-                
-                
-                print( now(), 'grid_maker.py: file_format = ', file_format )
+                    print( now(), 'grid_maker.py: grid_R set to to "g" : 0/360/-90/90')
+            else:
+                grid_R  = str(pid_d['lon_min']) + '/' + str(pid_d['lon_max']) + '/'
+                grid_R += str(pid_d['lat_min']) + '/' + str(pid_d['lat_max'])
 
-                # check if this file data has already been read in 
-                if not file_format == file_format_cache: 
+            # get the data file name specifics for this field 
+            file_name_component = Core_Citcom.field_to_file_map[field_name]['file']
+            print( now(), 'grid_maker.py: file_name_component = ', file_name_component )
 
-                    # read data by proc, e.g., velo, visc, comp_nd, surf, botm 
-                    file_data = Core_Citcom.read_proc_files_to_cap_list( master_d['pid_d'], file_format, field_name)
-                    # flatten data since we don't care about specific cap numbers for the loop over levels/depths
-                    file_data = Core_Util.flatten_nested_structure( file_data )
-                    print( now(), 'grid_maker.py: len(file_data) = ', len(file_data) )
-
-                    # update cache for next pass in loop over fields
-                    file_format_cache = file_format
-
-                # Get the specific column for this field_name
-                field_data = np.array( [ line[field_column] for line in file_data ] )
-                print( now(), 'grid_maker.py:  len(field_data) = ', len(field_data) )
-
-                # Check for compound field
-                if field_name_req == 'horiz_vmag':
-                    
-                    # Get the second component data ('vy')
-                    field_column = 1
-                    # read data by proc, e.g., velo, visc, comp_nd, surf, botm 
-                    file_data2 = Core_Citcom.read_proc_files_to_cap_list( master_d['pid_d'], file_format, field_name)
-                    # flatten data since we don't care about specific cap numbers for the loop over levels/depths
-                    file_data2 = Core_Util.flatten_nested_structure( file_data2 )
-                    print( now(), 'grid_maker.py: len(file_data2) = ', len(file_data2) )
-                    field_data2 = np.array( [ line[field_column] for line in file_data2 ] )
-                    print( now(), 'grid_maker.py:  len(field_data2) = ', len(field_data) )
-
-                    # combine the data and rest the main variable
-                    field_data3 = np.hypot( field_data, field_data2)
-                    field_data = field_data3
-
-                    # put back field name to requested name
-                    field_name = field_name_req 
-                # end if check on compound field
-
-
-                print( now(), 'grid_maker.py:  len(field_data) = ', len(field_data) )
-                print( now() )
-               
-                #
-                # Loop over levels 
-                #
-                for ll, level in enumerate( level_spec_d['list'] ) :
-
-                    print( now(), 'grid_maker.py: Processing level = ', level) 
-
-                    # ensure level is an int value 
-                    level = int(level)
-                    depth = int(depth_list[level])
-                    # pad the depth value 
-                    depth = '%04d' % depth
-
-                    print( now(), '------------------------------------------------------------------------------')
-                    print( now(), 'grid_maker.py: tt,ss,ll = ', tt, ',', ss, ',', ll, ';')
-                    print( now(), 'grid_maker.py: summary for', s, ': timestep =', timestep, '; age =', age_Ma, '; runtime_Myr =', runtime_Myr, '; level =', level, '; depth =', depth, ' km; field_name =', field_name)
-                    print( now(), '------------------------------------------------------------------------------')
-
-                    if field_name.startswith('vertical_'):
-                        # perform a z slice for citcom data 
-                        field_slice = field_data[level::nodez] # FIXME : how to get a v slice 
-                        xyz_filename = datafile + '-' + field_name + '-' + str(age_Ma) + 'Ma-' + str(depth) + 'km.xyz'
-                    else:
-                        # perform a z slice for citcom data 
-                        field_slice = field_data[level::nodez]
-                        #xyz_filename = datafile + '-' + field_name + '-' + str(timestep) + '-' + str(depth) + '.xyz'
-                        xyz_filename = datafile + '-' + field_name + '-' + str(age_Ma) + 'Ma-' + str(depth) + 'km.xyz'
-
-                    print( now(), 'grid_maker.py: xyz_filename =', xyz_filename)
+            # get the data file column name specifics for this field 
+            field_column = Core_Citcom.field_to_file_map[field_name]['column']
+            print( now(), 'grid_maker.py: field_column = ', field_column )
             
-                    if field_name == 'visc': field_slice = np.log10( field_slice )
+        
+            # create the total citcoms data filenames to read 
+            file_format = ''
+            
+            pos_for_abspath = datadir.find ("/Data")
+            
+            # check for various data dirs
+            if os.path.exists( datadir + '/0/') :
+                
+                print( now(), 'grid_maker.py: path found = ', datadir + '/0/' )
+                file_format = datadir + '/#/' + datafile + '.' + file_name_component + '.#.' + str(timestep)
 
-                    print( now(), 'grid_maker.py: type(field_slice) = ', type(field_slice) )
-                    print( now(), 'grid_maker.py:  len(field_slice) = ', len(field_slice) )
-                    print( now() )
+            elif os.path.exists( datadir + '/' ) :
+                print( now(), 'grid_maker.py: path found = ', datadir + '/' )
+                file_format = datadir + '/' + datafile + '.' + file_name_component + '.#.' + str(timestep)
+
+            elif os.path.exists('data') :
+                print( now(), 'grid_maker.py: path found = ', 'data' )
+                file_format = './data/#/' + datafile + '.' + file_name_component + '.#.' + str(timestep)
+
+            elif os.path.exists('Data') :
+                print( now(), 'grid_maker.py: path found = ', 'Data' )
+                file_format = './Data/#/' + datafile + '.' + file_name_component + '.#.' + str(timestep)
+                
+            
+            # Added path to dynamic topography post-processing - RC
+            elif os.path.exists('Age'+str(age_Ma)+'Ma') :
+                print( now(), 'grid_maker.py: path found = ', datadir )
+                file_format = './Age'+str(age_Ma)+'Ma/#/' + datafile + '.' + file_name_component + '.#.'+ str(timestep)
+            
+            # Added path to dynamic topography post-processing - RC
+            elif os.path.exists('Age'+str(output_dir_age)+'Ma') :
+                print( now(), 'grid_maker.py: path found = ', datadir )
+                file_format = './Age'+str(output_dir_age)+'Ma/#/' + datafile + '.' + file_name_component + '.#.'+ str(timestep)
+            
+            # Added path to post-process with remote location - RC
+            elif os.path.exists(datadir[:pos_for_abspath]) :
+                    
+                 file_format = datadir[:pos_for_abspath]+'/data/#/' + datafile + '.' + file_name_component + '.#.' + str(timestep)
+            
+            
+            # report error 
+            else :
+                print( now() )
+                print('ERROR: Cannot find output data.')
+                print('       Skipping this section.')
+                print( now(), 'grid_maker.py: file_format = ', file_format)
+                continue # to next section
+            
+            
+            
+            print( now(), 'grid_maker.py: file_format = ', file_format )
+
+            # check if this file data has already been read in 
+            if not file_format == file_format_cache: 
+
+                # read data by proc, e.g., velo, visc, comp_nd, surf, botm 
+                file_data = Core_Citcom.read_proc_files_to_cap_list( master_d['pid_d'], file_format, field_name)
+                # flatten data since we don't care about specific cap numbers for the loop over levels/depths
+                file_data = Core_Util.flatten_nested_structure( file_data )
+                print( now(), 'grid_maker.py: len(file_data) = ', len(file_data) )
+
+                # update cache for next pass in loop over fields
+                file_format_cache = file_format
+
+            # Get the specific column for this field_name
+            field_data = np.array( [ line[field_column] for line in file_data ] )
+            print( now(), 'grid_maker.py:  len(field_data) = ', len(field_data) )
+
+            # Check for compound field
+            if field_name_req == 'horiz_vmag':
+                
+                # Get the second component data ('vy')
+                field_column = 1
+                # read data by proc, e.g., velo, visc, comp_nd, surf, botm 
+                file_data2 = Core_Citcom.read_proc_files_to_cap_list( master_d['pid_d'], file_format, field_name)
+                # flatten data since we don't care about specific cap numbers for the loop over levels/depths
+                file_data2 = Core_Util.flatten_nested_structure( file_data2 )
+                print( now(), 'grid_maker.py: len(file_data2) = ', len(file_data2) )
+                field_data2 = np.array( [ line[field_column] for line in file_data2 ] )
+                print( now(), 'grid_maker.py:  len(field_data2) = ', len(field_data) )
+
+                # combine the data and rest the main variable
+                field_data3 = np.hypot( field_data, field_data2)
+                field_data = field_data3
+
+                # put back field name to requested name
+                field_name = field_name_req 
+            # end if check on compound field
 
 
-                    # create the xyz data
-                    xyz_data = np.column_stack( (lon, lat, field_slice) )
-                    np.savetxt( xyz_filename, xyz_data, fmt='%f %f %f' )
+            print( now(), 'grid_maker.py:  len(field_data) = ', len(field_data) )
+            print( now() )
+           
+            #
+            # Loop over levels 
+            #
+            for ll, level in enumerate( level_spec_d['list'] ) :
 
-                    #print( now(), 'grid_maker.py: type(xyz_data) = ', type(xyz_data) )
-                    #print( now(), 'grid_maker.py:  len(xyz_data) = ', len(xyz_data) )
-                    #print( now() )
+                print( now(), 'grid_maker.py: Processing level = ', level) 
 
-                    # recast the slice 
-                    #fs = np.array( field_slice )  
-                    #fs.shape = ( len(lat), len(lon) )
-                    #print( now(), 'grid_maker.py: type(fs) = ', type(field_slice) )
-                    #print( now(), 'grid_maker.py:  len(fs) = ', len(field_slice) )
-                    #print( now() )
+                # ensure level is an int value 
+                level = int(level)
+                depth = int(depth_list[level])
+                # pad the depth value 
+                depth = '%04d' % depth
 
-                    # check for a grid_R 
-                    if 'R' in control_d[s] :
-                        grid_R = control_d[s]['R']
+                print( now(), '------------------------------------------------------------------------------')
+                print( now(), 'grid_maker.py: tt,ss,ll = ', tt, ',', ss, ',', ll, ';')
+                print( now(), 'grid_maker.py: summary for', s, ': timestep =', timestep, '; age =', age_Ma, '; runtime_Myr =', runtime_Myr, '; level =', level, '; depth =', depth, ' km; field_name =', field_name)
+                print( now(), '------------------------------------------------------------------------------')
 
-                    # create the median file 
-                    median_xyz_filename = xyz_filename.rstrip('xyz') + 'median.xyz'
 
-                    blockmedian_I = control_d[s].get('blockmedian_I', '0.5')
-                    cmd = xyz_filename + ' -I' + str(blockmedian_I) + ' -R' + grid_R
+                if field_name.startswith('vertical_'):
+                    # perform a z slice for citcom data 
+                    field_slice = field_data[level::nodez] # FIXME : how to get a v slice 
+                    xyz_filename = datafile + '-' + field_name + '-' + str(age_Ma) + 'Ma-' + str(depth) + 'km.xyz'
+                else:
+                    # perform a z slice for citcom data 
+                    field_slice = field_data[level::nodez]
+                    #xyz_filename = datafile + '-' + field_name + '-' + str(timestep) + '-' + str(depth) + '.xyz'
+                    xyz_filename = datafile + '-' + field_name + '-' + str(age_Ma) + 'Ma-' + str(depth) + 'km.xyz'
 
-                    Core_GMT.callgmt( 'blockmedian', cmd, '', '>', median_xyz_filename )
+                print( now(), 'grid_maker.py: xyz_filename =', xyz_filename)
+        
+                if field_name == 'visc': field_slice = np.log10( field_slice )
 
-                    # get a T value for median file 
-                    if not 'Ll' in control_d[s] or not 'Lu' in control_d[s]:
-                        T = Core_GMT.get_T_from_minmax( median_xyz_filename )
-                    else:
-                        dt = (control_d[s]['Lu']-control_d[s]['Ll'])/10
-                        T = '-T' + str(control_d[s]['Ll']) + '/'
-                        T += str(control_d[s]['Lu']) + '/' + str(dt)
+                print( now(), 'grid_maker.py: type(field_slice) = ', type(field_slice) )
+                print( now(), 'grid_maker.py:  len(field_slice) = ', len(field_slice) )
+                print( now() )
 
-                    print( now(), 'grid_maker.py: T =', T)
 
-                   
+                # create the xyz data
+                xyz_data = np.column_stack( (lon, lat, field_slice) )
+                np.savetxt( xyz_filename, xyz_data, fmt='%f %f %f' )
 
-                    # create the grid
-                    grid_filename = xyz_filename.rstrip('xyz') + 'nc'
+                #print( now(), 'grid_maker.py: type(xyz_data) = ', type(xyz_data) )
+                #print( now(), 'grid_maker.py:  len(xyz_data) = ', len(xyz_data) )
+                #print( now() )
 
-                    surface_I = control_d[s].get('surface_I', '0.25')
-                    cmd = median_xyz_filename + ' -I' + str(surface_I) + ' -R' + grid_R 
+                # recast the slice 
+                #fs = np.array( field_slice )  
+                #fs.shape = ( len(lat), len(lon) )
+                #print( now(), 'grid_maker.py: type(fs) = ', type(field_slice) )
+                #print( now(), 'grid_maker.py:  len(fs) = ', len(field_slice) )
+                #print( now() )
 
-                    if 'Ll' in control_d[s]:
-                        cmd += ' -Ll' + str(control_d[s]['Ll'])
-                    if 'Lu' in control_d[s]:
-                        cmd += ' -Lu' + str(control_d[s]['Lu'])
-                    if 'T' in control_d[s]:
-                        cmd += ' -T' + str(control_d[s]['T'])
+                # check for a grid_R 
+                if 'R' in control_d[s] :
+                    grid_R = control_d[s]['R']
 
-                    #opt_a = 
-                    try:
-                        print('Trying the spherical interpolator')
-                        Core_GMT.callgmt( 'sphinterpolate', cmd, '', '', ' -G' + grid_filename )
-                    except:
-                        print('Spherical interpolator unsuccesful. Using gmt surface instead. This may cause some issues around the poles')
-                        Core_GMT.callgmt( 'surface', cmd, '', '', ' -G' + grid_filename )
-                    else:
-                        print('Spherical interpolator worked succesfully')
+                # create the median file 
+                median_xyz_filename = xyz_filename.rstrip('xyz') + 'median.xyz'
 
+                blockmedian_I = control_d[s].get('blockmedian_I', '0.5')
+                cmd = xyz_filename + ' -I' + str(blockmedian_I) + ' -R' + grid_R
+
+                Core_GMT.callgmt( 'blockmedian', cmd, '', '>', median_xyz_filename )
+
+                # get a T value for median file 
+                if not 'Ll' in control_d[s] or not 'Lu' in control_d[s]:
+                    T = Core_GMT.get_T_from_minmax( median_xyz_filename )
+                else:
+                    dt = (control_d[s]['Lu']-control_d[s]['Ll'])/10
+                    T = '-T' + str(control_d[s]['Ll']) + '/'
+                    T += str(control_d[s]['Lu']) + '/' + str(dt)
+
+                print( now(), 'grid_maker.py: T =', T)
+
+               
+
+                # create the grid
+                grid_filename = xyz_filename.rstrip('xyz') + 'nc'
+
+                surface_I = control_d[s].get('surface_I', '0.25')
+                cmd = median_xyz_filename + ' -I' + str(surface_I) + ' -R' + grid_R 
+
+                if 'Ll' in control_d[s]:
+                    cmd += ' -Ll' + str(control_d[s]['Ll'])
+                if 'Lu' in control_d[s]:
+                    cmd += ' -Lu' + str(control_d[s]['Lu'])
+                if 'T' in control_d[s]:
+                    cmd += ' -T' + str(control_d[s]['T'])
+
+                #opt_a = 
+                try:
+                    print(f'{now()} Trying the spherical interpolator')
+                    Core_GMT.callgmt( 'sphinterpolate', cmd, '', '', ' -G' + grid_filename )
+                except:
+                    print(f'{now()} Spherical interpolator unsuccesful. Using gmt surface instead. This may cause some issues around the poles')
+                    Core_GMT.callgmt( 'surface', cmd, '', '', ' -G' + grid_filename )
+                else:
+                    print(f'{now()} Spherical interpolator worked succesfully')
+
+                ### Jono- uncomment below to produce plots
+                if debug:
                     # label the variables
-			
+                    
                     # −Dxname/yname/zname/scale/offset/title/remark
                     cmd = grid_filename + ' -D/=/=/' + str(field_name) + '/=/=/' + str(field_name) + '/' + str(field_name)
                     Core_GMT.callgmt( 'grdedit', cmd, '', '', '')
-            
-                    # Dimensionalize grid   
+        
+                # Dimensionalize grid   
+                if control_d[s].get('dimensional'):
+                    print( now(), 'grid_maker.py: dimensional = ', control_d[s]['dimensional'])
+                    dim_grid_name = grid_filename.replace('.nc', '.dimensional.nc')
+                    Core_Citcom.dimensionalize_grid(pid_file, field_name, grid_filename, dim_grid_name)
 
-                    if control_d[s].get('dimensional'):
-                        print( now(), 'grid_maker.py: dimensional = ', control_d[s]['dimensional'])
-                        dim_grid_name = grid_filename.replace('.nc', '.dimensional.nc')
-                        Core_Citcom.dimensionalize_grid(pid_file, field_name, grid_filename, dim_grid_name)
+                    dim_dir_name = f'{field_name}_dimensional'
 
-                        # FIXME: for dynamic topo remove  mean 
-                        # grdinfo to get mean ; see To_Refactor for example 
+                    # # Add dimensionalised grid to its own folder
+                    # os.makedirs(f'{dim_dir_name}/{age_Ma}', exist_ok=True)
 
-                    # save this grid and its age in a list
-                    if control_d[s].get('dimensional'):
-                        grid_list.append( (dim_grid_name, age_Ma) )
-                    else: 
-                        grid_list.append( (grid_filename, age_Ma) )
+                    # if os.path.isfile(f'{dim_dir_name}/{age_Ma}/{dim_grid_name}'):
+                    #     os.remove(f'{dim_dir_name}/{age_Ma}/{dim_grid_name}')
+                    # shutil.move(dim_grid_name, f'{dim_dir_name}/{age_Ma}')
 
+                #     # FIXME: for dynamic topo remove  mean 
+                #     # grdinfo to get mean ; see To_Refactor for example 
 
-                    # Optional step to transform grid to plate frame
-                    if 'make_plate_frame_grid' in control_d :
-                        cmd = 'frame_change_pygplates.py %(age_Ma)s %(grid_filename)s %(grid_R)s' % vars()
-                        print(now(), 'grid_maker.py: cmd =', cmd)
-                        os.system(cmd)
+                # save this grid and its age in a list
+                if control_d[s].get('dimensional'):
+                    grid_list.append( (dim_grid_name, age_Ma) )
+                else: 
+                    grid_list.append( (grid_filename, age_Ma) )
 
 
-                    # Assoicate this grid with GPlates exported line data in .xy format:
-                    # compute age value 
-                    age_float = 0.0
+                # Optional step to transform grid to plate frame
+                if 'make_plate_frame_grid' in control_d :
+                    cmd = 'frame_change_pygplates.py %(age_Ma)s %(grid_filename)s %(grid_R)s' % vars()
+                    print(now(), 'grid_maker.py: cmd =', cmd)
+                    os.system(cmd)
 
-                    # time_list values for citcom data uses timesteps; get age 
-                    time_triple = Core_Citcom.get_time_triple_from_timestep(master_d['time_d']['triples'], timestep)
-                    age_float = time_triple[1]
 
+                # Assoicate this grid with GPlates exported line data in .xy format:
+                # compute age value 
+                age_float = 0.0
+
+                # time_list values for citcom data uses timesteps; get age 
+                time_triple = Core_Citcom.get_time_triple_from_timestep(master_d['time_d']['triples'], timestep)
+                age_float = time_triple[1]
+
+                if debug:
                     # truncate to nearest int and make a string for the gplates .xy file name 
                     if age_float < 0: age_float = 0.0
                     xy_path = master_d['geoframe_d']['gplates_line_dir']
                     #xy_filename = xy_path + '/' + 'topology_platepolygons_' + str(int(age_float)) + '.00Ma.xy'
                     xy_filename = xy_path + '/' + 'topology_platepolygons_' + str(int(age_Ma)) + '.00Ma.xy'
                     print( now(), 'grid_maker.py: xy_filename = ', xy_filename)
-    
+
 
                     # Make a plot of the grids
                     J = 'X5/3' #'R0/6'
@@ -564,29 +584,89 @@ def main():
                         T = Core_GMT.get_T_from_grdinfo( dim_grid_name )
                         Core_GMT.plot_grid( dim_grid_name, xy_filename, grid_R, T, J)
 
-                    # plot plate frame grid 
-                    if 'make_plate_frame_grid' in control_d :
-                        plateframe_grid_name = grid_filename.replace('.nc', '-plateframe.nc')
-                        xy_filename = ''
-                        xy_path = master_d['geoframe_d']['gplates_line_dir']
-                        # present day plate outlines : use '0' 
-                        xy_filename = xy_path + '/' + 'topology_platepolygons_0.00Ma.xy' 
-                        print( now(), 'grid_maker.py: xy_filename = ', xy_filename)
+                # plot plate frame grid 
+                if 'make_plate_frame_grid' in control_d :
+                    plateframe_grid_name = grid_filename.replace('.nc', '-plateframe.nc')
+                    xy_filename = ''
+                    xy_path = master_d['geoframe_d']['gplates_line_dir']
+                    # present day plate outlines : use '0' 
+                    xy_filename = xy_path + '/' + 'topology_platepolygons_0.00Ma.xy' 
+                    print( now(), 'grid_maker.py: xy_filename = ', xy_filename)
 
-                        T = Core_GMT.get_T_from_grdinfo( plateframe_grid_name )
-                        print( now(), 'grid_maker.py: T =', T)
-                        Core_GMT.plot_grid( plateframe_grid_name, xy_filename, grid_R, T, J)
-                    # end of plotting 
+                    T = Core_GMT.get_T_from_grdinfo( plateframe_grid_name )
+                    print( now(), 'grid_maker.py: T =', T)
+                    Core_GMT.plot_grid( plateframe_grid_name, xy_filename, grid_R, T, J)
+                # end of plotting 
 
-                # end of loop over levels 
+                # For normal (non-debug) mode, the produced grids go into neat folders
+                # JONO - create field and age directories if needed. Done here
+                # os.makedirs(field_name, exist_ok=True)
+                os.makedirs(f'{field_name}/{age_Ma}', exist_ok=True)
 
-            # end of loop over sections
+                if os.path.isfile(f'{field_name}/{age_Ma}/{grid_filename}'):
+                    os.remove(f'{field_name}/{age_Ma}/{grid_filename}')
+                shutil.move(grid_filename, f'{field_name}/{age_Ma}')
+
+                # Add dimensionalised grid to its own folder
+                if control_d[s].get('dimensional'):
+                    os.makedirs(f'{dim_dir_name}/{age_Ma}', exist_ok=True)
+
+                    if os.path.isfile(f'{dim_dir_name}/{age_Ma}/{dim_grid_name}'):
+                        os.remove(f'{dim_dir_name}/{age_Ma}/{dim_grid_name}')
+                    shutil.move(dim_grid_name, f'{dim_dir_name}/{age_Ma}')
+
+                if debug:
+                    if os.path.isfile(f'{field_name}/{age_Ma}/{xyz_filename}'):
+                        os.remove(f'{field_name}/{age_Ma}/{xyz_filename}')
+                    shutil.move(xyz_filename, f'{field_name}/{age_Ma}')
+
+                    if os.path.isfile(f'{field_name}/{age_Ma}/{median_xyz_filename}'):
+                        os.remove(f'{field_name}/{age_Ma}/{median_xyz_filename}')
+                    shutil.move(median_xyz_filename, f'{field_name}/{age_Ma}')
+
+                    ps = grid_filename.rstrip('.nc') + '.ps'
+                    if os.path.isfile(f'{field_name}/{age_Ma}/{ps}'):
+                        os.remove(f'{field_name}/{age_Ma}/{ps}')
+                    shutil.move(ps, f'{field_name}/{age_Ma}')  
+
+                    png = grid_filename.rstrip('.nc') + '.png'
+                    if os.path.isfile(f'{field_name}/{age_Ma}/{png}'):
+                        os.remove(f'{field_name}/{age_Ma}/{png}')
+                    shutil.move(png, f'{field_name}/{age_Ma}')                                            
+
+                    cpt = grid_filename.rstrip('.nc') + '.cpt'
+                    if os.path.isfile(f'{field_name}/{age_Ma}/{cpt}'):
+                        os.remove(f'{field_name}/{age_Ma}/{cpt}')
+                    shutil.move(cpt, f'{field_name}/{age_Ma}')  
+
+                    if control_d[s].get('dimensional'):
+                        ps = dim_grid_name.rstrip('.nc') + '.ps'
+                        if os.path.isfile(f'{dim_dir_name}/{age_Ma}/{ps}'):
+                            os.remove(f'{dim_dir_name}/{age_Ma}/{ps}')
+                        shutil.move(ps, f'{dim_dir_name}/{age_Ma}')  
+
+                        png = dim_grid_name.rstrip('.nc') + '.png'
+                        if os.path.isfile(f'{dim_dir_name}/{age_Ma}/{png}'):
+                            os.remove(f'{dim_dir_name}/{age_Ma}/{png}')
+                        shutil.move(png, f'{dim_dir_name}/{age_Ma}')                                            
+
+                        cpt = dim_grid_name.rstrip('.nc') + '.cpt'
+                        if os.path.isfile(f'{dim_dir_name}/{age_Ma}/{cpt}'):
+                            os.remove(f'{dim_dir_name}/{age_Ma}/{cpt}')
+                        shutil.move(cpt, f'{dim_dir_name}/{age_Ma}') 
+
+
+                # remove some of the unneeded files
+                if not debug:
+                    os.remove(xyz_filename)
+                    os.remove(median_xyz_filename)
+
+            # end of loop over levels 
+
+        # end of loop over sections
 
     # end of loop over times
     
-    # remove some of the unneeded files
-    #os.system("rm -f *.cpt")
-    #os.system("rm -f *.ps")
 
 #=====================================================================
 #=====================================================================
