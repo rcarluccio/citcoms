@@ -232,7 +232,8 @@ def main():
             age_Ma = int(np.around( found_d['found_age'] ) )
             
             # make a string and pad with zeros 
-            age_Ma = '%03d' % age_Ma
+            #age_Ma = '%03d' % age_Ma
+            age_Ma = str(age_Ma)
             
         # output dir add - RC
         output_dir_age = int(np.around(found_d['found_age']))
@@ -417,7 +418,8 @@ def main():
                 level = int(level)
                 depth = int(depth_list[level])
                 # pad the depth value 
-                depth = '%04d' % depth
+                #depth = '%04d' % depth
+                depth=str(depth)
 
                 print( now(), '------------------------------------------------------------------------------')
                 print( now(), 'grid_maker.py: tt,ss,ll = ', tt, ',', ss, ',', ll, ';')
@@ -601,59 +603,61 @@ def main():
                 # For normal (non-debug) mode, the produced grids go into neat folders
                 # JONO - create field and age directories if needed. Done here
                 # os.makedirs(field_name, exist_ok=True)
-                os.makedirs(f'{field_name}/{age_Ma}', exist_ok=True)
+                grid_dir=f'{datafile}/{field_name}/{age_Ma}'
+                os.makedirs(grid_dir, exist_ok=True)
 
-                if os.path.isfile(f'{field_name}/{age_Ma}/{grid_filename}'):
-                    os.remove(f'{field_name}/{age_Ma}/{grid_filename}')
-                shutil.move(grid_filename, f'{field_name}/{age_Ma}')
+                if os.path.isfile(f'{grid_dir}/{grid_filename}'):
+                    os.remove(f'{grid_dir}/{grid_filename}')
+                shutil.move(grid_filename, f'{grid_dir}')
 
                 # Add dimensionalised grid to its own folder
                 if control_d[s].get('dimensional'):
-                    os.makedirs(f'{dim_dir_name}/{age_Ma}', exist_ok=True)
+                    dim_grid_dir=f'{datafile}/{dim_dir_name}/{age_Ma}'
+                    os.makedirs(f'{dim_grid_dir}', exist_ok=True)
 
-                    if os.path.isfile(f'{dim_dir_name}/{age_Ma}/{dim_grid_name}'):
-                        os.remove(f'{dim_dir_name}/{age_Ma}/{dim_grid_name}')
-                    shutil.move(dim_grid_name, f'{dim_dir_name}/{age_Ma}')
+                    if os.path.isfile(f'{dim_grid_dir}/{dim_grid_name}'):
+                        os.remove(f'{dim_grid_dir}/{dim_grid_name}')
+                    shutil.move(dim_grid_name, f'{dim_grid_dir}')
 
                 if debug:
-                    if os.path.isfile(f'{field_name}/{age_Ma}/{xyz_filename}'):
-                        os.remove(f'{field_name}/{age_Ma}/{xyz_filename}')
-                    shutil.move(xyz_filename, f'{field_name}/{age_Ma}')
+                    if os.path.isfile(f'{grid_dir}/{xyz_filename}'):
+                        os.remove(f'{grid_dir}/{xyz_filename}')
+                    shutil.move(xyz_filename, f'{grid_dir}')
 
-                    if os.path.isfile(f'{field_name}/{age_Ma}/{median_xyz_filename}'):
-                        os.remove(f'{field_name}/{age_Ma}/{median_xyz_filename}')
-                    shutil.move(median_xyz_filename, f'{field_name}/{age_Ma}')
+                    if os.path.isfile(f'{grid_dir}/{median_xyz_filename}'):
+                        os.remove(f'{grid_dir}/{median_xyz_filename}')
+                    shutil.move(median_xyz_filename, f'{grid_dir}')
 
                     ps = grid_filename.rstrip('.nc') + '.ps'
-                    if os.path.isfile(f'{field_name}/{age_Ma}/{ps}'):
-                        os.remove(f'{field_name}/{age_Ma}/{ps}')
-                    shutil.move(ps, f'{field_name}/{age_Ma}')  
+                    if os.path.isfile(f'{grid_dir}/{ps}'):
+                        os.remove(f'{grid_dir}/{ps}')
+                    shutil.move(ps, f'{grid_dir}')  
 
                     png = grid_filename.rstrip('.nc') + '.png'
-                    if os.path.isfile(f'{field_name}/{age_Ma}/{png}'):
-                        os.remove(f'{field_name}/{age_Ma}/{png}')
-                    shutil.move(png, f'{field_name}/{age_Ma}')                                            
+                    if os.path.isfile(f'{grid_dir}/{png}'):
+                        os.remove(f'{grid_dir}/{png}')
+                    shutil.move(png, f'{grid_dir}')                                            
 
                     cpt = grid_filename.rstrip('.nc') + '.cpt'
-                    if os.path.isfile(f'{field_name}/{age_Ma}/{cpt}'):
-                        os.remove(f'{field_name}/{age_Ma}/{cpt}')
-                    shutil.move(cpt, f'{field_name}/{age_Ma}')  
+                    if os.path.isfile(f'{grid_dir}/{cpt}'):
+                        os.remove(f'{grid_dir}/{cpt}')
+                    shutil.move(cpt, f'{grid_dir}')  
 
                     if control_d[s].get('dimensional'):
                         ps = dim_grid_name.rstrip('.nc') + '.ps'
-                        if os.path.isfile(f'{dim_dir_name}/{age_Ma}/{ps}'):
-                            os.remove(f'{dim_dir_name}/{age_Ma}/{ps}')
-                        shutil.move(ps, f'{dim_dir_name}/{age_Ma}')  
+                        if os.path.isfile(f'{dim_grid_dir}/{ps}'):
+                            os.remove(f'{dim_grid_dir}/{ps}')
+                        shutil.move(ps, f'{dim_grid_dir}')  
 
                         png = dim_grid_name.rstrip('.nc') + '.png'
-                        if os.path.isfile(f'{dim_dir_name}/{age_Ma}/{png}'):
-                            os.remove(f'{dim_dir_name}/{age_Ma}/{png}')
-                        shutil.move(png, f'{dim_dir_name}/{age_Ma}')                                            
+                        if os.path.isfile(f'{dim_grid_dir}/{png}'):
+                            os.remove(f'{dim_grid_dir}/{png}')
+                        shutil.move(png, f'{dim_grid_dir}')                                            
 
                         cpt = dim_grid_name.rstrip('.nc') + '.cpt'
-                        if os.path.isfile(f'{dim_dir_name}/{age_Ma}/{cpt}'):
-                            os.remove(f'{dim_dir_name}/{age_Ma}/{cpt}')
-                        shutil.move(cpt, f'{dim_dir_name}/{age_Ma}') 
+                        if os.path.isfile(f'{dim_grid_dir}/{cpt}'):
+                            os.remove(f'{dim_grid_dir}/{cpt}')
+                        shutil.move(cpt, f'{dim_grid_dir}') 
 
 
                 # remove some of the unneeded files
