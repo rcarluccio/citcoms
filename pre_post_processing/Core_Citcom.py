@@ -120,6 +120,7 @@ field_to_dimensional_map = {
     'coord'      : { 'coef' : 1, 'const' : 0, 'units' : 'none' }, # coordinate data
 
     # fields in .velo. files
+    'horiz_vmag'         : { 'coef' : 1, 'const' : 0, 'units' : 'cm/yr' }, # horiz_vmag
     'vx'         : { 'coef' : 1, 'const' : 0, 'units' : 'cm/yr' }, # velocity x  
     'vy'         : { 'coef' : 1, 'const' : 0, 'units' : 'cm/yr' }, # velocity y  
     'vz'         : { 'coef' : 1, 'const' : 0, 'units' : 'cm/yr' }, # velocity z  
@@ -1763,6 +1764,9 @@ def populate_field_to_dimensional_map_from_pid( pid_file ):
     field_to_dimensional_map['vy']['const'] = 0
     field_to_dimensional_map['vz']['coef'] = pid_d['scalev']
     field_to_dimensional_map['vz']['const'] = 0
+    
+    field_to_dimensional_map['horiz_vmag']['coef'] = pid_d['scalev']
+    field_to_dimensional_map['horiz_vmag']['const'] = 0
 
     # pressure
     field_to_dimensional_map['pressure']['coef'] = pid_d['scalep']
