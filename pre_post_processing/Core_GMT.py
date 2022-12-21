@@ -434,7 +434,7 @@ def get_T_from_minmax(xyz_filename) :
 def get_T_from_grdinfo(grid_filename):
     '''get a -T value from grdinfo on a grid file'''
 
-    cmd = 'grdinfo -C %(grid_filename)s' % vars()
+    cmd = 'gmt grdinfo -C %(grid_filename)s' % vars()
     s = subprocess.check_output( cmd, shell=True, universal_newlines=True)
     if verbose: print( Core_Util.now(), cmd )
     l = s.split()
@@ -452,6 +452,9 @@ def get_T_from_grdinfo(grid_filename):
         max = max + dt 
         min = min - dt 
 
+    # Jono edit: make sure gmt can make a colour paletter with at least two nodes
+    if max - min < dt:
+        dt = (max - min)*0.9 
     T = '-T%(min)s/%(max)s/%(dt)s' % vars()
     if verbose: print( Core_Util.now(), 'T =', T )
 
