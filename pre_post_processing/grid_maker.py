@@ -207,9 +207,10 @@ def main():
             # convert the found age to an int
             age_Ma = int(np.around( found_d['found_age'] ) )
 
-            # make a string and pad with zeros 
+            # save age number for grids storage
+            age_Ma_storing=age_Ma
+             
             age_Ma = '%03d' % age_Ma
-
 
         else:
 
@@ -362,8 +363,6 @@ def main():
                 print( now(), 'grid_maker.py: file_format = ', file_format)
                 continue # to next section
             
-            
-            
             print( now(), 'grid_maker.py: file_format = ', file_format )
 
             # check if this file data has already been read in 
@@ -420,7 +419,6 @@ def main():
                 # pad the depth value 
                 #depth = '%04d' % depth
                 depth=str(depth)
-
                 print( now(), '------------------------------------------------------------------------------')
                 print( now(), 'grid_maker.py: tt,ss,ll = ', tt, ',', ss, ',', ll, ';')
                 print( now(), 'grid_maker.py: summary for', s, ': timestep =', timestep, '; age =', age_Ma, '; runtime_Myr =', runtime_Myr, '; level =', level, '; depth =', depth, ' km; field_name =', field_name)
@@ -430,12 +428,16 @@ def main():
                 if field_name.startswith('vertical_'):
                     # perform a z slice for citcom data 
                     field_slice = field_data[level::nodez] # FIXME : how to get a v slice 
-                    xyz_filename = datafile + '-' + field_name + '-' + str(age_Ma) + 'Ma-' + str(depth) + 'km.xyz'
+                   #xyz_filename = datafile + '-' + field_name + '-' + str(age_Ma_storing) + 'Ma-' + str(depth) + 'km.xyz'
+                    xyz_filename = datafile + '_' + field_name + '_t' + str(age_Ma_storing)+ '_' + str(depth) + '.xyz'
+
+
                 else:
                     # perform a z slice for citcom data 
                     field_slice = field_data[level::nodez]
                     #xyz_filename = datafile + '-' + field_name + '-' + str(timestep) + '-' + str(depth) + '.xyz'
-                    xyz_filename = datafile + '-' + field_name + '-' + str(age_Ma) + 'Ma-' + str(depth) + 'km.xyz'
+                    #xyz_filename = datafile + '-' + field_name + '-' + str(age_Ma_storing) + 'Ma-' + str(depth) + 'km.xyz'
+                    xyz_filename = datafile + '_' + field_name + '_t' + str(age_Ma_storing)+ '_' + str(depth) + '.xyz'
 
                 print( now(), 'grid_maker.py: xyz_filename =', xyz_filename)
         
@@ -519,7 +521,7 @@ def main():
                 # Dimensionalize grid   
                 if control_d[s].get('dimensional'):
                     print( now(), 'grid_maker.py: dimensional = ', control_d[s]['dimensional'])
-                    dim_grid_name = grid_filename.replace('.nc', '.dimensional.nc')
+                    dim_grid_name = grid_filename.replace('.nc', '_dimensional.nc')
                     Core_Citcom.dimensionalize_grid(pid_file, field_name, grid_filename, dim_grid_name)
 
                     dim_dir_name = f'{field_name}_dimensional'
@@ -582,7 +584,7 @@ def main():
                     # also plot dimensional grid 
                     if control_d[s].get('dimensional') :
                         print( now(), 'grid_maker.py: plotting dimensional = ', control_d[s]['dimensional'])
-                        dim_grid_name = grid_filename.replace('.nc', '.dimensional.nc')
+                        dim_grid_name = grid_filename.replace('.nc', '_dimensional.nc')
                         T = Core_GMT.get_T_from_grdinfo( dim_grid_name )
                         Core_GMT.plot_grid( dim_grid_name, xy_filename, grid_R, T, J)
 
@@ -603,16 +605,16 @@ def main():
                 # For normal (non-debug) mode, the produced grids go into neat folders
                 # JONO - create field and age directories if needed. Done here
                 # os.makedirs(field_name, exist_ok=True)
-                grid_dir=f'{datafile}/{field_name}/{age_Ma}'
+                grid_dir=f'{datafile}/{field_name}/{age_Ma_storing}'
                 os.makedirs(grid_dir, exist_ok=True)
-
+                
                 if os.path.isfile(f'{grid_dir}/{grid_filename}'):
                     os.remove(f'{grid_dir}/{grid_filename}')
                 shutil.move(grid_filename, f'{grid_dir}')
 
                 # Add dimensionalised grid to its own folder
                 if control_d[s].get('dimensional'):
-                    dim_grid_dir=f'{datafile}/{dim_dir_name}/{age_Ma}'
+                    dim_grid_dir=f'{datafile}/{dim_dir_name}/{age_Ma_storing}'
                     os.makedirs(f'{dim_grid_dir}', exist_ok=True)
 
                     if os.path.isfile(f'{dim_grid_dir}/{dim_grid_name}'):
