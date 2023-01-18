@@ -207,11 +207,6 @@ def main():
             # convert the found age to an int
             age_Ma = int(np.around( found_d['found_age'] ) )
 
-            # save age number for grids storage
-            age_Ma_storing=age_Ma
-             
-            age_Ma = '%03d' % age_Ma
-
         else:
 
             time = float( time ) 
@@ -234,7 +229,11 @@ def main():
             
             # make a string and pad with zeros 
             #age_Ma = '%03d' % age_Ma
-            age_Ma = str(age_Ma)
+            # age_Ma = str(age_Ma)
+
+        # save age number for grids storage
+        age_Ma_storing=age_Ma
+        age_Ma = '%03d' % age_Ma
             
         # output dir add - RC
         output_dir_age = int(np.around(found_d['found_age']))
