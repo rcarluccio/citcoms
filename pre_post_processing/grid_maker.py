@@ -207,6 +207,11 @@ def main():
             # convert the found age to an int
             age_Ma = int(np.around( found_d['found_age'] ) )
 
+            # save age number for grids storage
+            age_Ma_storing=age_Ma
+             
+            age_Ma = '%03d' % age_Ma
+
         else:
 
             time = float( time ) 
@@ -229,11 +234,7 @@ def main():
             
             # make a string and pad with zeros 
             #age_Ma = '%03d' % age_Ma
-            # age_Ma = str(age_Ma)
-
-        # save age number for grids storage
-        age_Ma_storing=age_Ma
-        age_Ma = '%03d' % age_Ma
+            age_Ma = str(age_Ma)
             
         # output dir add - RC
         output_dir_age = int(np.around(found_d['found_age']))
@@ -384,7 +385,9 @@ def main():
             if field_name_req == 'horiz_vmag':
                 
                 # Get the second component data ('vy')
-                field_column = 1
+                #field_column = 1
+                # RC note - this is now extracting Vy as read by gmt N-S component 
+                field_column = 0
                 # read data by proc, e.g., velo, visc, comp_nd, surf, botm 
                 file_data2 = Core_Citcom.read_proc_files_to_cap_list( master_d['pid_d'], file_format, field_name)
                 # flatten data since we don't care about specific cap numbers for the loop over levels/depths
@@ -485,7 +488,6 @@ def main():
                 print( now(), 'grid_maker.py: T =', T)
 
                
-
                 # create the grid
                 grid_filename = xyz_filename.rstrip('xyz') + 'nc'
 

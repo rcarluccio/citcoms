@@ -47,11 +47,18 @@ field_to_file_map = {
     # coordinate data; NOTE: column is a placeholder 
     'coord' : { 'file' : 'coord', 'column' : 0, 'header_count' : 1 }, # coordinate data
 
-    # fields in .velo. files
-    'vx'         : { 'file' : 'velo', 'column' : 0, 'header_count' : 2 }, # velocity x  
-    'vy'         : { 'file' : 'velo', 'column' : 1, 'header_count' : 2 }, # velocity y  
-    'vz'         : { 'file' : 'velo', 'column' : 2, 'header_count' : 2 }, # velocity z  
-    'temp'       : { 'file' : 'velo', 'column' : 3, 'header_count' : 2 }, # temperature 
+    # fields in .velo. files; RC Note: vx and vy have been flipped to reflect long to lat gmt architecture consider change it back for other purposes
+    # RC: this is the corrected E-W velocity, negative at 270 and positive at 90 degress
+    'vx'  : { 'file' : 'velo', 'column' : 1, 'header_count' : 2 }, # velocity x
+
+    #'vx'  : { 'file' : 'velo', 'column' : 0, 'header_count' : 2 }, # original velocity x
+
+    # RC: this is the N-S velocity, negative at 0 and positive at 180 degress. Needs to *-1 to correct the sign. This is done in gridmaker
+    'vy'  : { 'file' : 'velo', 'column' : 0, 'header_count' : 2 }, # velocity y
+    #'vy'  : { 'file' : 'velo', 'column' : 1, 'header_count' : 2 }, # velocity y
+    
+    'vz'  : { 'file' : 'velo', 'column' : 2, 'header_count' : 2 }, # velocity z
+    'temp'  : { 'file' : 'velo', 'column' : 3, 'header_count' : 2 }, # temperature
 
     # divergence (divv) - DJB
     # can only be output using CitcomS assimilation version of the code
@@ -124,7 +131,8 @@ field_to_dimensional_map = {
     'vx'         : { 'coef' : 1, 'const' : 0, 'units' : 'cm/yr' }, # velocity x  
     'vy'         : { 'coef' : 1, 'const' : 0, 'units' : 'cm/yr' }, # velocity y  
     'vz'         : { 'coef' : 1, 'const' : 0, 'units' : 'cm/yr' }, # velocity z  
-    'temp'       : { 'coef' : 1, 'const' : 0, 'units' : 'Kelvins' }, # temperature 
+    #'temp_kelvin'       : { 'coef' : 1, 'const' : 0, 'units' : 'Kelvins' }, # temperature 
+    'temp'       : { 'coef' : 1, 'const' : 0, 'units' : 'celsius' }, # temperature 
 
     # fields in mixed files; see above
     'divv'       : { 'coef' : 1, 'const' : 0, 'units' : 'none' }, # divergence
@@ -407,10 +415,12 @@ def derive_extra_citcom_parameters( arg ):
 
     ndict['radius_km'] = arg['radius']*1E-3 # radius of Earth in km
 
-    # total temperature drop across the model
+    # total temperature drop across the model in Celsius
+    # RC this assumes temperature varies between 0 K and max dt 
     ndict['tempdrop'] = arg['rayleigh']*arg['refvisc']*arg['thermdiff'] \
-        / (arg['density']*arg['thermexp']*arg['gravacc']*arg['radius']**3)
-
+        / (arg['density']*arg['thermexp']*arg['gravacc']*arg['radius']**3) 
+    ndict['tempdrop'] -=273.15
+    
     # thermal conductivity
     ndict['thermcond'] = arg['thermdiff']*arg['density']*arg['cp']
 
@@ -423,6 +433,8 @@ def derive_extra_citcom_parameters( arg ):
     # non-dimensional to cm/yr
     ndict['scalev'] = arg['thermdiff']/arg['radius']
     ndict['scalev'] *= 100*3600*24*365.25
+    #RC correction for Vy gmt and related plots
+    ndict['scalev_correction']=(arg['thermdiff']/arg['radius'])*( 100*3600*24*365.25)*(-1)
 
     # surf_topography - uses density_above for seawater!
     # might need scaling by refstate.rho and refstate.gravity
@@ -1760,7 +1772,7 @@ def populate_field_to_dimensional_map_from_pid( pid_file ):
     # velocity
     field_to_dimensional_map['vx']['coef'] = pid_d['scalev']
     field_to_dimensional_map['vx']['const'] = 0
-    field_to_dimensional_map['vy']['coef'] = pid_d['scalev']
+    field_to_dimensional_map['vy']['coef'] = pid_d['scalev_correction']
     field_to_dimensional_map['vy']['const'] = 0
     field_to_dimensional_map['vz']['coef'] = pid_d['scalev']
     field_to_dimensional_map['vz']['const'] = 0
